@@ -174,3 +174,13 @@ body {
 .edit-comment {
   width: 456px;
 }
+
+.quote {
+  background-color: #bcec30;
+  color: #000;
+  border: none;
+  border-radius: 18px;
+  padding: 10px 20px;
+  margin-bottom: 32px;
+  white-space: pre-wrap;
+}
