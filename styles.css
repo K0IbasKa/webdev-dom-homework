@@ -120,6 +120,11 @@ body {
   justify-content: flex-end;
 }
 
+.add-form-row-asd {
+  display: flex;
+  justify-content: space-between;
+}
+
 .add-form-button {
   margin-top: 24px;
   font-size: 24px;
