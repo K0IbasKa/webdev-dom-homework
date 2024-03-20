@@ -3,6 +3,7 @@ const nameInputElement = document.getElementById('name-input');
 const textInputElement = document.getElementById('text-input');
 const listElement = document.getElementById('list');
 const deleteLastElementButton = document.getElementById('delete-last-button');
+let nLevel = 0;
 
 const users = [
   {
@@ -12,7 +13,8 @@ const users = [
     likes: 3,
     likesFlag: false,
     isEdit: false,
-    otherEdit: false
+    otherEdit: false,
+    nestingLevel: 0
   },
   {
     name: 'Варвара Н.',
@@ -21,7 +23,8 @@ const users = [
     likes: 75,
     likesFlag: true,
     isEdit: false,
-    otherEdit: false
+    otherEdit: false,
+    nestingLevel: 0
   }
 ]
 
@@ -38,7 +41,7 @@ const disabledButton = (ti) => {
 
 const renderCommentators = () => {
   const userHTML = users.map((user, index) => {
-    return `<li class="comment" >
+    return `<li class="comment" data-index=${index}>
   <div class="comment-header">
     <div>${user.name}</div>
     <div>${user.date}</div>
@@ -59,12 +62,32 @@ const renderCommentators = () => {
   listElement.innerHTML = userHTML;
   initEditCommentButtons();
   initEventListenders();
+  initReplyComment();
+}
+
+const initReplyComment = () => {
+  const replyComments = document.querySelectorAll('.comment');
+  for (let replyComment of replyComments) {
+    let tIndex = replyComment.dataset.index;
+    replyComment.addEventListener('click', () => {
+      nLevel = users[tIndex].nestingLevel + 1;
+      textInputElement.value = `>${users[tIndex].text}\n\n${users[tIndex].name},`.replaceAll("&gt;", "");
+    })
+  }
+}
+
+const initTextAreaEdit = () => {
+  const textEdits = document.getElementById('comment-edit');
+  textEdits.addEventListener('click', (event) => {
+    event.stopPropagation();
+  });
 }
 
 const initEventListenders = () => {
   const likeButtonsElements = document.querySelectorAll('.like-button');
   for (let likeButtonElement of likeButtonsElements)
-    likeButtonElement.addEventListener('click', () => {
+    likeButtonElement.addEventListener('click', (event) => {
+      event.stopPropagation();
       let tIndex = likeButtonElement.dataset.index;
       if (users[tIndex].likesFlag) {
         users[tIndex].likes--;
@@ -81,7 +104,8 @@ const initEditCommentButtons = () => {
   const buttonsEditComment = document.querySelectorAll('.button-edit-comment');
   const textEdits = document.getElementById('comment-edit');
   for (let buttonEditComment of buttonsEditComment) {
-    buttonEditComment.addEventListener('click', () => {
+    buttonEditComment.addEventListener('click', (event) => {
+      event.stopPropagation();
       let tIndex = buttonEditComment.dataset.index;
       if (users[tIndex].isEdit) {
         users[tIndex].text = textEdits.value;
@@ -90,14 +114,17 @@ const initEditCommentButtons = () => {
           if (otherButtons.dataset.index != tIndex)
             users[otherButtons.dataset.index].otherEdit = false;
         }
+        renderCommentators();
       } else {
         users[tIndex].isEdit = true;
         for (let otherButtons of buttonsEditComment) {
           if (otherButtons.dataset.index != tIndex)
             users[otherButtons.dataset.index].otherEdit = true;
         }
+        renderCommentators();
+        initTextAreaEdit();
       }
-      renderCommentators();
+
     })
   }
 }
@@ -128,22 +155,31 @@ buttonElement.addEventListener('click', () => {
 
   const currentDate = new Date();
   users.push({
-    name: nameInputElement.value,
+    name: nameInputElement.value
+      .replaceAll("&", "&amp;")
+      .replaceAll("<", "&lt;")
+      .replaceAll(">", "&gt;")
+      .replaceAll('"', "&quot;"),
     date: (currentDate.getDate() < 10 ? '0' + (currentDate.getDate()) : currentDate.getDate()) + '.'
       + (currentDate.getMonth() < 9 ? '0' + (currentDate.getMonth() + 1) : currentDate.getMonth() + 1) + '.'
       + currentDate.getFullYear() + ' '
       + (currentDate.getHours() < 10 ? '0' + (currentDate.getHours()) : currentDate.getHours()) + ':'
       + (currentDate.getMinutes() < 10 ? '0' + (currentDate.getMinutes()) : currentDate.getMinutes()) + ':'
       + (currentDate.getSeconds() < 10 ? '0' + (currentDate.getSeconds()) : currentDate.getSeconds()),
-    text: textInputElement.value,
+    text: textInputElement.value
+      .replaceAll("&", "&amp;")
+      .replaceAll("<", "&lt;")
+      .replaceAll(">", "&gt;")
+      .replaceAll('"', "&quot;"),
     likes: 0,
     likesFlag: false,
     isEdit: false,
-    otherEdit: false
+    otherEdit: false,
+    nestingLevel: nLevel
   })
 
   renderCommentators();
-
+  nLevel = 0;
   nameInputElement.value = '';
   textInputElement.value = '';
 })
