@@ -120,6 +120,11 @@ body {
   justify-content: flex-end;
 }
 
+.add-form-row-asd {
+  display: flex;
+  justify-content: space-between;
+}
+
 .add-form-button {
   margin-top: 24px;
   font-size: 24px;
@@ -173,4 +178,14 @@ body {
 
 .edit-comment {
   width: 456px;
+}
+
+.quote {
+  background-color: #bcec30;
+  color: #000;
+  border: none;
+  border-radius: 18px;
+  padding: 10px 20px;
+  margin-bottom: 32px;
+  white-space: pre-wrap;
 }
