@@ -188,18 +188,18 @@ const renderAddForm = () => {
               .replaceAll("<", "&lt;")
               .replaceAll(">", "&gt;")
               .replaceAll('"', "&quot;"),
-            date: toLocalDate(currentDate),
+            //date: toLocalDate(currentDate),
             text: textInputElement.value
               .replaceAll("&", "&amp;")
               .replaceAll("<", "&lt;")
               .replaceAll(">", "&gt;")
               .replaceAll('"', "&quot;"),
-            textReply: nLevel === 0 ? '' : `QUOTE_BEGIN ${nText} QUOTE_END`,
-            likes: 0,
-            likesFlag: false,
-            isEdit: false,
-            otherEdit: false,
-            nestingLevel: nLevel
+            // textReply: nLevel === 0 ? '' : `QUOTE_BEGIN ${nText} QUOTE_END`,
+            // likes: 0,
+            // likesFlag: false,
+            // isEdit: false,
+            // otherEdit: false,
+            // nestingLevel: nLevel
           }
         )
       })
