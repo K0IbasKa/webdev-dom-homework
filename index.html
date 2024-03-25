@@ -9,16 +9,20 @@
 
 <body>
   <div class="container">
+    <div class="comment-header comment comments-update" id="update-comments">
+      Комментарии обновляются...
+    </div>
+    <div class="comment-header comment shutdown" id="no-comments">
+      Комментариев нет!
+    </div>
     <ul class="comments" id="list">
       <!-- Список рендерится из JS -->
     </ul>
+    <div class="comment-header comment comment-adding shutdown" id="add-comment">
+      Комментарий добавляется...
+    </div>
     <div class="add-form" id="add-form">
-      <!-- <input type="text" class="add-form-name" placeholder="Введите ваше имя" id="name-input" />
-      <textarea type="textarea" class="add-form-text" placeholder="Введите ваш коментарий" rows="4"
-        id="text-input"></textarea>
-      <div class="add-form-row">
-        <button class="add-form-button" id="add-form-button">Написать</button>
-      </div> -->
+      <!-- Кнопка рендерится из JS -->
     </div>
     <button class="add-form-button delete-last-button" id="delete-last-button">Удалить последний комментарий</button>
   </div>
