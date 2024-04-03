@@ -1,12 +1,16 @@
 const listElement = document.getElementById('list');
 const deleteLastElementButton = document.getElementById('delete-last-button');
 const addFormElement = document.getElementById('add-form');
+const commnetsUpdateElement = document.getElementById('update-comments');
+const commentAddingElement = document.getElementById('add-comment');
+const noCommentElement = document.getElementById('no-comments');
 let nLevel = 0; //уровень вложенности (думал как-то сделать, но не придумал)
 let nText = ''; //текст комментария, на который отвечают
 let nName = '';
+let loadingComment = true;
 
-const users = [
-  {
+let users = [
+  /*{
     name: 'Глеб Фокин',
     date: '12.02.22 12:18',
     text: 'Это будет первый комментарий на этой странице',
@@ -27,8 +31,54 @@ const users = [
     isEdit: false,
     otherEdit: false,
     nestingLevel: 0
-  }
-]
+  }*/
+];
+
+const toLocalDate = (date) => {
+  return (date.getDate() < 10 ? '0' + (date.getDate()) : date.getDate()) + '.'
+    + (date.getMonth() < 9 ? '0' + (date.getMonth() + 1) : date.getMonth() + 1) + '.'
+    + date.getFullYear() + ' '
+    + (date.getHours() < 10 ? '0' + (date.getHours()) : date.getHours()) + ':'
+    + (date.getMinutes() < 10 ? '0' + (date.getMinutes()) : date.getMinutes()) + ':'
+    + (date.getSeconds() < 10 ? '0' + (date.getSeconds()) : date.getSeconds());
+}
+
+const receivingCommentData = () => {
+  fetch("https://wedev-api.sky.pro/api/v1/ivan-uskov/comments")
+    .then((response) => {
+      response.json()
+        .then((responseData) => {
+          users = responseData.comments.map((comment) => {
+            return {
+              name: comment.author.name,
+              date: toLocalDate(new Date(comment.date)),
+              text: comment.text,
+              textReply: '',
+              likes: comment.likes,
+              likesFlag: comment.isLiked,
+              isEdit: false,
+              otherEdit: false,
+              nestingLevel: 0
+            }
+          });
+
+        })
+        .then(() => {
+          commnetsUpdateElement.classList.add('shutdown');
+          if (!loadingComment) {
+            commentAddingElement.classList.add('shutdown');
+            loadingComment = true;
+          }
+          if (users.length === 0) {
+            noCommentElement.classList.remove('shutdown');
+          } else {
+            renderCommentators();
+          }
+        })
+    })
+  /*.then(() => {
+  })*/
+}
 
 const renderCommentators = () => {
   const userHTML = users.map((user, index) => {
@@ -50,7 +100,8 @@ const renderCommentators = () => {
       <button class="like-button ${user.likesFlag ? '-active-like' : ''}" data-index=${index}></button>
     </div>
   </div>
-</li>`}).join('');
+</li>`
+  }).join('');
   listElement.innerHTML = userHTML;
   initEditCommentButtons();
   initEventListenders();
@@ -119,33 +170,40 @@ const renderAddForm = () => {
       return;
     }
 
-    const currentDate = new Date();
-    users.push({
-      name: nameInputElement.value
-        .replaceAll("&", "&amp;")
-        .replaceAll("<", "&lt;")
-        .replaceAll(">", "&gt;")
-        .replaceAll('"', "&quot;"),
-      date: (currentDate.getDate() < 10 ? '0' + (currentDate.getDate()) : currentDate.getDate()) + '.'
-        + (currentDate.getMonth() < 9 ? '0' + (currentDate.getMonth() + 1) : currentDate.getMonth() + 1) + '.'
-        + currentDate.getFullYear() + ' '
-        + (currentDate.getHours() < 10 ? '0' + (currentDate.getHours()) : currentDate.getHours()) + ':'
-        + (currentDate.getMinutes() < 10 ? '0' + (currentDate.getMinutes()) : currentDate.getMinutes()) + ':'
-        + (currentDate.getSeconds() < 10 ? '0' + (currentDate.getSeconds()) : currentDate.getSeconds()),
-      text: textInputElement.value
-        .replaceAll("&", "&amp;")
-        .replaceAll("<", "&lt;")
-        .replaceAll(">", "&gt;")
-        .replaceAll('"', "&quot;"),
-      textReply: nLevel === 0 ? '' : `QUOTE_BEGIN ${nText} QUOTE_END`,
-      likes: 0,
-      likesFlag: false,
-      isEdit: false,
-      otherEdit: false,
-      nestingLevel: nLevel
-    })
+    if (loadingComment) {
+      commentAddingElement.classList.remove('shutdown');
+      loadingComment = false;
+    }
 
-    renderCommentators();
+
+    const currentDate = new Date();
+
+    fetch("https://wedev-api.sky.pro/api/v1/ivan-uskov/comments",
+      {
+        method: "POST",
+        body: JSON.stringify(
+          {
+            name: nameInputElement.value
+              .replaceAll("&", "&amp;")
+              .replaceAll("<", "&lt;")
+              .replaceAll(">", "&gt;")
+              .replaceAll('"', "&quot;"),
+            //date: toLocalDate(currentDate),
+            text: textInputElement.value
+              .replaceAll("&", "&amp;")
+              .replaceAll("<", "&lt;")
+              .replaceAll(">", "&gt;")
+              .replaceAll('"', "&quot;"),
+            // textReply: nLevel === 0 ? '' : `QUOTE_BEGIN ${nText} QUOTE_END`,
+            // likes: 0,
+            // likesFlag: false,
+            // isEdit: false,
+            // otherEdit: false,
+            // nestingLevel: nLevel
+          }
+        )
+      })
+      .then(() => receivingCommentData());
     nLevel = 0;
     renderAddForm();
     nameInputElement.value = '';
@@ -160,7 +218,6 @@ const initReplyComment = () => {
   for (let replyComment of replyComments) {
     let tIndex = replyComment.dataset.index;
     replyComment.addEventListener('click', (event) => {
-      //event.stopPropagation();
       nLevel = users[tIndex].nestingLevel + 1;
       nText = `${users[tIndex].text}\n\tот ${users[tIndex].name}`;
       nName = users[tIndex].name;
@@ -228,4 +285,4 @@ deleteLastElementButton.addEventListener('click', (event) => {
   renderCommentators();
 })
 
-renderCommentators();
+receivingCommentData();

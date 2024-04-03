@@ -38,8 +38,17 @@ body {
   gap: 24px;
 }
 
+.comments-update {
+  margin-bottom: 24px;
+  margin-top: 24px;
+}
+
 .comment {
   padding: 48px;
+}
+
+.comment-adding {
+  margin-top: 24px;
 }
 
 .comment-header {
@@ -188,4 +197,8 @@ body {
   padding: 10px 20px;
   margin-bottom: 32px;
   white-space: pre-wrap;
+}
+
+.shutdown {
+  display: none;
 }
