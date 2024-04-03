@@ -44,40 +44,36 @@ const toLocalDate = (date) => {
 }
 
 const receivingCommentData = () => {
-  fetch("https://wedev-api.sky.pro/api/v1/ivan-uskov/comments")
-    .then((response) => {
-      response.json()
-        .then((responseData) => {
-          users = responseData.comments.map((comment) => {
-            return {
-              name: comment.author.name,
-              date: toLocalDate(new Date(comment.date)),
-              text: comment.text,
-              textReply: '',
-              likes: comment.likes,
-              likesFlag: comment.isLiked,
-              isEdit: false,
-              otherEdit: false,
-              nestingLevel: 0
-            }
-          });
-
-        })
-        .then(() => {
-          commnetsUpdateElement.classList.add('shutdown');
-          if (!loadingComment) {
-            commentAddingElement.classList.add('shutdown');
-            loadingComment = true;
-          }
-          if (users.length === 0) {
-            noCommentElement.classList.remove('shutdown');
-          } else {
-            renderCommentators();
-          }
-        })
+  return fetch("https://wedev-api.sky.pro/api/v1/ivan-uskov/comments")
+    .then((response) => response.json())
+    .then((responseData) => {
+      users = responseData.comments.map((comment) => {
+        return {
+          name: comment.author.name,
+          date: toLocalDate(new Date(comment.date)),
+          text: comment.text,
+          textReply: '',
+          likes: comment.likes,
+          likesFlag: comment.isLiked,
+          likesLoading: false,
+          isEdit: false,
+          otherEdit: false,
+          nestingLevel: 0
+        }
+      });
     })
-  /*.then(() => {
-  })*/
+    .then(() => {
+      commnetsUpdateElement.classList.add('shutdown');
+      if (!loadingComment) {
+        commentAddingElement.classList.add('shutdown');
+        loadingComment = true;
+      }
+      if (users.length === 0) {
+        noCommentElement.classList.remove('shutdown');
+      } else {
+        renderCommentators();
+      }
+    })
 }
 
 const renderCommentators = () => {
@@ -97,7 +93,7 @@ const renderCommentators = () => {
   <button class="button-edit-comment" data-index=${index} ${user.otherEdit ? 'disabled' : ''}>${user.isEdit ? 'Сохранить' : 'Редактировать'}</button>
     <div class="likes">
       <span class="likes-counter">${user.likes}</span>
-      <button class="like-button ${user.likesFlag ? '-active-like' : ''}" data-index=${index}></button>
+      <button class="like-button ${user.likesLoading ? '-loading-like' : ''} ${user.likesFlag ? '-active-like' : ''}" data-index=${index}></button>
     </div>
   </div>
 </li>`
@@ -174,9 +170,8 @@ const renderAddForm = () => {
       commentAddingElement.classList.remove('shutdown');
       loadingComment = false;
     }
-
-
-    const currentDate = new Date();
+    //const currentDate = new Date();
+    buttonElement.classList.add('disabled');
 
     fetch("https://wedev-api.sky.pro/api/v1/ivan-uskov/comments",
       {
@@ -203,9 +198,9 @@ const renderAddForm = () => {
           }
         )
       })
-      .then(() => receivingCommentData());
+      .then(() => receivingCommentData())
+      .then(() => renderAddForm());
     nLevel = 0;
-    renderAddForm();
     nameInputElement.value = '';
     textInputElement.value = '';
   })
@@ -226,20 +221,34 @@ const initReplyComment = () => {
   }
 }
 
+const delay = (interval = 300) => {
+  return new Promise((resolve) => {
+    setTimeout(() => {
+      resolve();
+    }, interval);
+  });
+}
+
 const initEventListenders = () => {
   const likeButtonsElements = document.querySelectorAll('.like-button');
   for (let likeButtonElement of likeButtonsElements)
     likeButtonElement.addEventListener('click', (event) => {
       event.stopPropagation();
       let tIndex = likeButtonElement.dataset.index;
-      if (users[tIndex].likesFlag) {
-        users[tIndex].likes--;
-        users[tIndex].likesFlag = false;
-      } else {
-        users[tIndex].likes++;
-        users[tIndex].likesFlag = true;
-      }
+      users[tIndex].likesLoading = true;
       renderCommentators();
+      delay(2000)
+        .then(() => {
+          if (users[tIndex].likesFlag) {
+            users[tIndex].likes--;
+            users[tIndex].likesFlag = false;
+          } else {
+            users[tIndex].likes++;
+            users[tIndex].likesFlag = true;
+          }
+          users[tIndex].likesLoading = false;
+          renderCommentators();
+        })
     })
 }
 
@@ -283,6 +292,6 @@ deleteLastElementButton.addEventListener('click', (event) => {
   listElement.innerHTML = listElement.innerHTML.slice(0, listElement.innerHTML.lastIndexOf(`< li class="comment" > `));
   users.pop();
   renderCommentators();
-})
+});
 
 receivingCommentData();
