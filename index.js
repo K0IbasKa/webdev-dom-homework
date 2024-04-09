@@ -4,10 +4,10 @@ const addFormElement = document.getElementById('add-form');
 const commnetsUpdateElement = document.getElementById('update-comments');
 const commentAddingElement = document.getElementById('add-comment');
 const noCommentElement = document.getElementById('no-comments');
-let nLevel = 0; //уровень вложенности (думал как-то сделать, но не придумал)
-let nText = ''; //текст комментария, на который отвечают
-let nName = '';
-let loadingComment = true;
+let nLevel = 0; // уровень вложенности (думал как-то сделать, но не придумал)
+let nText = ''; // текст комментария, на который отвечают
+let nName = ''; // Имя пользомателя, которомк отвечают
+let loadingComment = true; // Прогрузка комментария
 
 let users = [
   /*{
@@ -35,6 +35,7 @@ let users = [
 ];
 
 const toLocalDate = (date) => {
+  // Формат времени
   return (date.getDate() < 10 ? '0' + (date.getDate()) : date.getDate()) + '.'
     + (date.getMonth() < 9 ? '0' + (date.getMonth() + 1) : date.getMonth() + 1) + '.'
     + date.getFullYear() + ' '
@@ -43,9 +44,49 @@ const toLocalDate = (date) => {
     + (date.getSeconds() < 10 ? '0' + (date.getSeconds()) : date.getSeconds());
 }
 
+const delay = (interval = 300) => {
+  return new Promise((resolve) => {
+    setTimeout(() => {
+      resolve();
+    }, interval);
+  });
+}
+
+const secureInput = (textValue) => {
+  // Безопасный ввод полей
+  return textValue
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+}
+
+const hidingAddingElement = () => {
+  // Скрыть элемент загрузки комментария
+  commentAddingElement.classList.add('shutdown');
+  loadingComment = true;
+}
+
 const receivingCommentData = () => {
   return fetch("https://wedev-api.sky.pro/api/v1/ivan-uskov/comments")
-    .then((response) => response.json())
+    .catch(() => {
+      hidingAddingElement();
+      alert('Ошибка соединения, попробуйте позже!');
+      return Promise.reject('Ошибка соединения!');
+    })
+    .then((response) => {
+      switch (response.status) {
+        case 500:
+          hidingAddingElement();
+          alert('Сервер сломался, попробуйте позже!');
+          return Promise.reject('Ошибка сервера!');
+        default:
+          return response.json();
+      }
+    })
+    .catch(() => {
+      buttonElement.classList.remove('disabled');
+    })
     .then((responseData) => {
       users = responseData.comments.map((comment) => {
         return {
@@ -58,7 +99,7 @@ const receivingCommentData = () => {
           likesLoading: false,
           isEdit: false,
           otherEdit: false,
-          nestingLevel: 0
+          nestingLevel: 0,
         }
       });
     })
@@ -178,31 +219,49 @@ const renderAddForm = () => {
         method: "POST",
         body: JSON.stringify(
           {
-            name: nameInputElement.value
-              .replaceAll("&", "&amp;")
-              .replaceAll("<", "&lt;")
-              .replaceAll(">", "&gt;")
-              .replaceAll('"', "&quot;"),
+            name: secureInput(nameInputElement.value),
             //date: toLocalDate(currentDate),
-            text: textInputElement.value
-              .replaceAll("&", "&amp;")
-              .replaceAll("<", "&lt;")
-              .replaceAll(">", "&gt;")
-              .replaceAll('"', "&quot;"),
+            text: secureInput(textInputElement.value),
             // textReply: nLevel === 0 ? '' : `QUOTE_BEGIN ${nText} QUOTE_END`,
             // likes: 0,
             // likesFlag: false,
             // isEdit: false,
             // otherEdit: false,
             // nestingLevel: nLevel
+            forceError: true,
           }
         )
       })
-      .then(() => receivingCommentData())
-      .then(() => renderAddForm());
+      .catch(() => {
+        hidingAddingElement();
+        alert('Ошибка соединения, попробуйте позже!');
+        return Promise.reject('Ошибка соединения!');
+      })
+      .then((response) => {
+        switch (response.status) {
+          case 201:
+            return receivingCommentData();
+          case 400:
+            hidingAddingElement();
+            alert('Имя и комментарий должны быть не меньше 3-х симолов');
+            return Promise.reject('Ошибка ввода!');
+          case 500:
+            hidingAddingElement();
+            alert('Сервер сломался, попробуйте позже!');
+            return Promise.reject('Ошибка сервера!');
+          default:
+            return Promise.reject('Ошибка');
+        }
+      })
+      .then(() => {
+        renderAddForm();
+        nameInputElement.value = '';
+        textInputElement.value = '';
+      })
+      .catch(() => {
+        buttonElement.classList.remove('disabled');
+      })
     nLevel = 0;
-    nameInputElement.value = '';
-    textInputElement.value = '';
   })
 }
 
@@ -219,14 +278,6 @@ const initReplyComment = () => {
       renderAddForm();
     })
   }
-}
-
-const delay = (interval = 300) => {
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      resolve();
-    }, interval);
-  });
 }
 
 const initEventListenders = () => {
