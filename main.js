@@ -7,24 +7,35 @@ import {
   postCommentData,
 } from './modules/api.js';
 import {
-  delayPromise,
   shutdownElement,
   openElement,
+  deleteLastComment,
+  getLoadingComment,
+  setLoadingComment,
+  hidingAddingElement,
 } from "./modules/common.js";
 import {
   renderCommentators,
   renderAddForm,
+  renderAuthorizationForm,
 } from "./modules/render.js"
+import {
+  getAuthorized,
+  getName,
+} from "./modules/authorization.js"
 const listElement = document.getElementById('list');
 const deleteLastElementButton = document.getElementById('delete-last-button');
 const addFormElement = document.getElementById('add-form');
+const authorizationFormElement = document.getElementById('authorization');
 const commnetsUpdateElement = document.getElementById('update-comments');
 const commentAddingElement = document.getElementById('add-comment');
 const noCommentElement = document.getElementById('no-comments');
+let buttonElement;
+let nameInputElement;
+let textInputElement;
 let nLevel = 0; // уровень вложенности (думал как-то сделать, но не придумал)
 let nText = ''; // текст комментария, на который отвечают
 let nName = ''; // Имя пользомателя, которомк отвечают
-let loadingComment = true; // Прогрузка комментария
 
 let users = [
   /*{
@@ -39,16 +50,13 @@ let users = [
     nestingLevel: 0
   },*/
 ];
-
 renderAddForm(addFormElement);
 
-// Скрыть элемент загрузки комментария
-const hidingAddingElement = () => {
-  shutdownElement(commentAddingElement);
-  loadingComment = true;
-}
-
 const receivingCommentData = () => {
+  renderAuthorizationForm(authorizationFormElement, addFormElement);
+  buttonElement = document.getElementById('add-form-button');
+  nameInputElement = document.getElementById('name-input');
+  textInputElement = document.getElementById('text-input');
   getCommentData()
     .catch(() => {
       buttonElement.classList.remove('disabled');
@@ -71,26 +79,24 @@ const receivingCommentData = () => {
     })
     .then(() => {
       shutdownElement(commnetsUpdateElement)
-      if (!loadingComment) {
+      if (!getLoadingComment()) {
         shutdownElement(commentAddingElement);
-        loadingComment = true;
+        setLoadingComment(true);
       }
       if (users.length === 0) {
         openElement(noCommentElement);
       } else {
-        renderCommentators(listElement, users, initEditCommentButtons, initEventListenders, initReplyComment);
+        renderCommentators(listElement, users, nLevel, nText, nName);
+        deleteLastComment(listElement, users, nLevel, nText, nName, deleteLastElementButton)
       }
     })
 }
 
-const buttonElement = document.getElementById('add-form-button');
-const nameInputElement = document.getElementById('name-input');
-const textInputElement = document.getElementById('text-input');
+receivingCommentData();
 
 const disabledButton = (ti) => {
   buttonElement.removeAttribute('disabled');
   buttonElement.classList.remove('disabled');
-  nameInputElement.classList.remove('error');
   textInputElement.classList.remove('error');
   if (ti.target.value.trim() === '') {
     buttonElement.setAttribute('disabled', '');
@@ -103,30 +109,32 @@ const enterInput = (ti) => {
     buttonElement.click();
 }
 
-nameInputElement.addEventListener('input', disabledButton);
 textInputElement.addEventListener('input', disabledButton);
 
-nameInputElement.addEventListener('keyup', enterInput);
 textInputElement.addEventListener('keyup', enterInput);
 
 buttonElement.addEventListener('click', () => {
-  nameInputElement.classList.remove('error');
-  textInputElement.classList.remove('error');
-  if (nameInputElement.value.trim() === '') {
-    nameInputElement.classList.add('error');
+  if (!getAuthorized()) {
+    const headerAuthorizationElement = document.getElementById("header");
+    const containerComments = document.getElementById("container");
+    shutdownElement(headerAuthorizationElement);
+    containerComments.classList.add('blur');
+    openElement(authorizationFormElement);
     return;
   }
+  textInputElement.classList.remove('error');
   if (textInputElement.value.trim() === '') {
     textInputElement.classList.add('error');
     return;
   }
 
-  if (loadingComment) {
+  if (getLoadingComment()) {
     openElement(commentAddingElement);
-    loadingComment = false;
+    setLoadingComment(false);
   }
   //const currentDate = new Date();
   buttonElement.classList.add('disabled');
+  buttonElement.setAttribute('disabled', '');
 
   postCommentData(
     secureInput(nameInputElement.value),
@@ -153,107 +161,12 @@ buttonElement.addEventListener('click', () => {
       }
     })
     .then(() => {
-      nameInputElement.value = '';
       textInputElement.value = '';
+      buttonElement.classList.remove('disabled');
+      buttonElement.removeAttribute('disabled');
     })
     .catch(() => {
       buttonElement.classList.remove('disabled');
     })
   nLevel = 0;
 })
-
-const initReplyComment = () => {
-  const replyComments = document.querySelectorAll('.comment');
-  const canselBattonElement = document.getElementById('cansel-form-button');
-  const addFormRow = document.getElementById('add-form-row');
-  canselBattonElement.addEventListener('click', () => {
-    nLevel = 0;
-    nText = '';
-    nName = '';
-    textInputElement.placeholder = `Введите ваш комментарий`;
-    textInputElement.value = '';
-    shutdownElement(canselBattonElement);
-    addFormRow.classList.add('add-form-row');
-    addFormRow.classList.remove('add-form-row-box');
-  })
-  for (let replyComment of replyComments) {
-    let tIndex = replyComment.dataset.index;
-    replyComment.addEventListener('click', (event) => {
-      nLevel = users[tIndex].nestingLevel + 1;
-      nText = `${users[tIndex].text}\n\tот ${users[tIndex].name}`;
-      nName = users[tIndex].name;
-
-      openElement(canselBattonElement);
-      addFormRow.classList.remove('add-form-row');
-      addFormRow.classList.add('add-form-row-box');
-      textInputElement.placeholder = `Введите ваш ответ пользователю ${nName}`;
-    })
-  }
-}
-
-const initEventListenders = () => {
-  const likeButtonsElements = document.querySelectorAll('.like-button');
-  for (let likeButtonElement of likeButtonsElements)
-    likeButtonElement.addEventListener('click', (event) => {
-      event.stopPropagation();
-      let tIndex = likeButtonElement.dataset.index;
-      users[tIndex].likesLoading = true;
-      renderCommentators(listElement, users, initEditCommentButtons, initEventListenders, initReplyComment);
-      delayPromise(2000)
-        .then(() => {
-          if (users[tIndex].likesFlag) {
-            users[tIndex].likes--;
-            users[tIndex].likesFlag = false;
-          } else {
-            users[tIndex].likes++;
-            users[tIndex].likesFlag = true;
-          }
-          users[tIndex].likesLoading = false;
-          renderCommentators(listElement, users, initEditCommentButtons, initEventListenders, initReplyComment);
-        })
-    })
-}
-
-const initTextAreaEdit = () => {
-  const textEdits = document.getElementById('comment-edit');
-  textEdits.addEventListener('click', (event) => {
-    event.stopPropagation();
-  });
-}
-
-const initEditCommentButtons = () => {
-  const buttonsEditComment = document.querySelectorAll('.button-edit-comment');
-  const textEdits = document.getElementById('comment-edit');
-  for (let buttonEditComment of buttonsEditComment) {
-    buttonEditComment.addEventListener('click', (event) => {
-      event.stopPropagation();
-      let tIndex = buttonEditComment.dataset.index;
-      if (users[tIndex].isEdit) {
-        users[tIndex].text = textEdits.value;
-        users[tIndex].isEdit = false;
-        for (let otherButtons of buttonsEditComment) {
-          if (otherButtons.dataset.index != tIndex)
-            users[otherButtons.dataset.index].otherEdit = false;
-        }
-        renderCommentators(listElement, users, initEditCommentButtons, initEventListenders, initReplyComment);
-      } else {
-        users[tIndex].isEdit = true;
-        for (let otherButtons of buttonsEditComment) {
-          if (otherButtons.dataset.index != tIndex)
-            users[otherButtons.dataset.index].otherEdit = true;
-        }
-        renderCommentators(listElement, users, initEditCommentButtons, initEventListenders, initReplyComment);
-        initTextAreaEdit();
-      }
-    })
-  }
-}
-
-deleteLastElementButton.addEventListener('click', (event) => {
-  event.stopPropagation();
-  listElement.innerHTML = listElement.innerHTML.slice(0, listElement.innerHTML.lastIndexOf(`< li class="comment" > `));
-  users.pop();
-  renderCommentators(listElement, users, initEditCommentButtons, initEventListenders, initReplyComment);
-});
-
-receivingCommentData();
