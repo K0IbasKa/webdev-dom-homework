@@ -1,6 +1,19 @@
+import {
+    hidingAddingElement,
+} from "./common.js";
+
+const commentURL = "https://wedev-api.sky.pro/api/v2/ivan-uskov/comments";
+const userURL = "https://wedev-api.sky.pro/api/user";
+const loginURL = "https://wedev-api.sky.pro/api/user/login"
+let token;
+
 //Получить данные от API
 export function getCommentData() {
-    return fetch("https://wedev-api.sky.pro/api/v1/ivan-uskov/comments")
+    return fetch(commentURL, {
+        headers: {
+            Authorization: `Bearer ${token}`,
+        },
+    })
         .catch(() => {
             hidingAddingElement();
             alert('Ошибка соединения, попробуйте позже!');
@@ -8,6 +21,8 @@ export function getCommentData() {
         })
         .then((response) => {
             switch (response.status) {
+                case 401:
+                    return Promise.reject('Ошибка авторизации!');
                 case 500:
                     hidingAddingElement();
                     alert('Сервер сломался, попробуйте позже!');
@@ -20,9 +35,12 @@ export function getCommentData() {
 
 //Отправить данные в API
 export function postCommentData(name, text) {
-    return fetch("https://wedev-api.sky.pro/api/v1/ivan-uskov/comments",
+    return fetch(commentURL,
         {
             method: "POST",
+            headers: {
+                Authorization: `Bearer ${token}`,
+            },
             body: JSON.stringify(
                 {
                     name: name,
@@ -38,4 +56,23 @@ export function postCommentData(name, text) {
                 }
             )
         })
+}
+
+//Вход по логину
+export function postLogin(login, password) {
+    return fetch(loginURL,
+        {
+            method: "POST",
+            body: JSON.stringify(
+                {
+                    login: login,
+                    password: password,
+                }
+            )
+        })
+}
+
+//Записать токен
+export function setToken(tToken) {
+    token = tToken;
 }
