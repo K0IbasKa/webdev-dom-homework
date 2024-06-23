@@ -67,7 +67,7 @@ export function deleteLastComment(listElement, tUsers, nL, nT, nN, deleteButton)
 }
 
 // Скрыть элемент загрузки комментария
-export function hidingAddingElement() {
+export function hidingAddingElement(commentAddingElement) {
     shutdownElement(commentAddingElement);
     loadingComment = true;
 }

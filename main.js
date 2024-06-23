@@ -1,4 +1,7 @@
 import {
+  format,
+} from "date-fns"
+import {
   toLocalDate,
   secureInput,
 } from "./modules/commentProcessing.js";
@@ -65,7 +68,7 @@ const receivingCommentData = () => {
       users = responseData.comments.map((comment) => {
         return {
           name: comment.author.name,
-          date: toLocalDate(new Date(comment.date)),
+          date: format(new Date(comment.date), "yyyy-MM-dd hh.mm.ss"),
           text: comment.text,
           textReply: '',
           likes: comment.likes,
@@ -141,7 +144,7 @@ buttonElement.addEventListener('click', () => {
     secureInput(textInputElement.value)
   )
     .catch(() => {
-      hidingAddingElement();
+      hidingAddingElement(commentAddingElement);
       alert('Ошибка соединения, попробуйте позже!');
       return Promise.reject('Ошибка соединения!');
     })
@@ -150,11 +153,11 @@ buttonElement.addEventListener('click', () => {
         case 201:
           return receivingCommentData();
         case 400:
-          hidingAddingElement();
+          hidingAddingElement(commentAddingElement);
           alert('Имя и комментарий должны быть не меньше 3-х симолов');
           return Promise.reject('Ошибка ввода!');
         case 500:
-          hidingAddingElement();
+          hidingAddingElement(commentAddingElement);
           buttonElement.click();
         default:
           return Promise.reject('Ошибка');
